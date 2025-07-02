@@ -5,6 +5,15 @@ import br.com.gerenciamento.enums.Status;
 import br.com.gerenciamento.enums.Turno;
 import br.com.gerenciamento.model.Aluno;
 import jakarta.validation.ConstraintViolationException;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
 import org.junit.*;
 import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -44,4 +53,51 @@ public class AlunoServiceTest {
         Assert.assertThrows(ConstraintViolationException.class, () -> {
                 this.serviceAluno.save(aluno);});
     }
+    // Teste 1: Buscar aluno por ID existente
+    @Test
+    void deveRetornarAlunoQuandoIdExistir() {
+        when(alunoRepository.findById(1L)).thenReturn(Optional.of(alunoValido));
+        
+        Aluno resultado = alunoService.getById(1L);
+        
+        assertEquals("Vinicius", resultado.getNome());
+        assertEquals(Turno.NOTURNO, resultado.getTurno());
+        verify(alunoRepository, times(1)).findById(1L);
+    }
+
+    // Teste 2: Lançar exceção quando aluno não existe
+    @Test
+    void deveLancarExcecaoQuandoIdNaoExistir() {
+        when(alunoRepository.findById(99L)).thenReturn(Optional.empty());
+        
+        assertThrows(RuntimeException.class, () -> {
+            alunoService.getById(99L);
+        });
+    }
+
+    // Teste 3: Salvar aluno com sucesso
+    @Test
+    void deveSalvarAlunoQuandoDadosValidos() {
+        when(alunoRepository.save(any(Aluno.class))).thenReturn(alunoValido);
+        
+        Aluno resultado = alunoService.save(alunoValido);
+        
+        assertNotNull(resultado);
+        assertEquals("123456", resultado.getMatricula());
+        verify(alunoRepository, times(1)).save(alunoValido);
+    }
+
+    // Teste 4: Falhar ao salvar aluno inválido
+    @Test
+    void deveLancarExcecaoQuandoAlunoInvalido() {
+        Aluno alunoInvalido = new Aluno(); // Sem nome (obrigatório)
+        
+        when(alunoRepository.save(alunoInvalido))
+            .thenThrow(ConstraintViolationException.class);
+        
+        assertThrows(ConstraintViolationException.class, () -> {
+            alunoService.save(alunoInvalido);
+        });
+    }
+
 }
